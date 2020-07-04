@@ -1,0 +1,42 @@
+@startuml class
+class Environment {
+    void run()
+}
+class Field {
+    void reset()
+}
+class TileManager {
+    void _create()
+    void reset()
+    [Tiles] haipai()
+    Tiles tsumo()
+    void show()
+    Boolean is_finish()
+}
+class Tile {
+
+}
+class PlayerManager {
+    Boolean action()
+    void first()
+}
+class Player {
+    void set_jikaze(String kaze)
+    void reset()
+    void haipai([Tile])
+    void tsumo(Tile)
+    void sute()
+}
+class TileType {
+    MANZU
+    SOUZU
+    PINZU
+    JIHAI
+}
+Environment --> PlayerManager
+Field --> TileManager
+TileManager --> Tile
+Tile --> TileType
+PlayerManager --> Player
+PlayerManager --> Field
+@enduml
