@@ -114,51 +114,82 @@ def judge_tatsu(tiles_, tile):
     return flg, ret
 
 
-def function(combination_tiles, tile_pair):
-    other_combination = []
-    if len(tile_pair) == 2:
-        tile1 = tile_pair[0]
-        tile2 = tile_pair[1]
-        shanten = 1
-        for comb_ in combination_tiles:
-            if tile1 not in comb_ and tile2 not in comb_:
-                other_combination.append(comb_)
-    elif len(tile_pair) == 3:
-        tile1 = tile_pair[0]
-        tile2 = tile_pair[1]
-        tile3 = tile_pair[2]
-        shanten = 2
-        for comb_ in combination_tiles:
-            if tile1 not in comb_ and tile2 not in comb_ and tile3 not in comb_:
-                other_combination.append(comb_)
-    return shanten, other_combination
+def sort_combination(combination_tiles):
+    ret = []
+    toitsu = []
+    kotsu = []
+    shuntsu = []
+    tatsu = []
+    # 対子 > 刻子 > 順子 > 塔子の順にする
+    for comb in combination_tiles:
+        if len(comb) == 3:
+            if comb[0].num == comb[1].num:
+                kotsu.append(comb)
+            else:
+                shuntsu.append(comb)
+        elif len(comb) == 2:
+            if comb[0].num == comb[1].num:
+                toitsu.append(comb)
+            else:
+                tatsu.append(comb)
+    ret.extend(toitsu)
+    ret.extend(kotsu)
+    ret.extend(shuntsu)
+    ret.extend(tatsu)
+    return ret
 
 
-def calc_shanten_recursive(combination_tiles):
-    best_shanten1, best_combs1 = 0, []
-    for tile_pair1 in combination_tiles:
-        shanten1, other_combination1 = function(combination_tiles, tile_pair1)
-        best_shanten2, best_combs2 = 0, []
-        for tile_pair2 in other_combination1:
-            shanten2, other_combination2 = function(
-                other_combination1, tile_pair2)
-            print(other_combination2)
-            if best_shanten2 < shanten2:
-                best_shanten2 = shanten2
-                best_combs2.append(tile_pair2)
-        shanten1 += best_shanten2
-        if best_shanten1 < shanten1:
-            best_shanten1 = shanten1
-            best_combs1 = copy(best_combs2)
-            best_combs1.append(tile_pair1)
-
-    return best_shanten1, best_combs1
+def calc_shanten_recursive(tile_pair, combination_tiles):
+    best_shanten, best_combs = 0, []
+    if len(combination_tiles) == 0:
+        return 0, []
+    if len(combination_tiles) == 1:
+        tiles = combination_tiles[0]
+        best_shanten = 2 if len(tiles) == 3 else 1
+        tiles = [tiles]
+        return best_shanten, tiles
+    for tile_pair in combination_tiles:
+        other_combination = []
+        if len(tile_pair) == 2:
+            tile1 = tile_pair[0]
+            tile2 = tile_pair[1]
+            shanten = 1
+            for comb_ in combination_tiles:
+                if tile1 not in comb_ and tile2 not in comb_:
+                    other_combination.append(comb_)
+        elif len(tile_pair) == 3:
+            tile1 = tile_pair[0]
+            tile2 = tile_pair[1]
+            tile3 = tile_pair[2]
+            shanten = 2
+            for comb_ in combination_tiles:
+                if tile1 not in comb_ and tile2 not in comb_ and tile3 not in comb_:
+                    other_combination.append(comb_)
+        if len(other_combination) == 0:
+            return shanten, [tile_pair]
+        other_combination = sort_combination(other_combination)
+        for tile_pair2 in other_combination:
+            best_shanten2, combs2 = calc_shanten_recursive(
+                tile_pair2, other_combination)
+        shanten += best_shanten2
+        if best_shanten < shanten:
+            best_shanten = shanten
+            best_combs = copy(combs2)
+            best_combs.append(tile_pair)
+    return best_shanten, best_combs
 
 
 def calc_shanten_by_type(combination_tiles):
-    shanten, tiles = calc_shanten_recursive(combination_tiles)
-    print(shanten, tiles)
-    return shanten, tiles
+    if len(combination_tiles) == 0:
+        return 0, []
+    if len(combination_tiles) == 1:
+        tiles = combination_tiles[0]
+        best_shanten = 2 if len(tiles) == 3 else 1
+        return best_shanten, [tiles]
+    combination_tiles = sort_combination(combination_tiles)
+    for tile_pair in combination_tiles:
+        shanten, combs = calc_shanten_recursive(tile_pair, combination_tiles)
+    return shanten, combs
 
 
 def calc_shanten(combination_tiles):
@@ -172,14 +203,51 @@ def calc_shanten(combination_tiles):
     jihai_combination = [
         ts for ts in combination_tiles if ts[0].tile_type is TileType.JIHAI]
 
+    shanten_list = []
+    tiles_list = []
     for combination in [manzu_combination, souzu_combination, pinzu_combination, jihai_combination]:
-        print('-----')
-        print('A')
-        print(combination)
         shanten, tiles = calc_shanten_by_type(combination)
-        print('-----')
+        shanten_list.append(shanten)
+        tiles_list.append(tiles)
 
-    return best_shanten
+    block_num = 0
+    mentsu_num = 0
+    toitsu_num = 0
+    for shanten, combs in zip(shanten_list, tiles_list):
+        if len(combs) != 0:
+            best_shanten -= shanten
+            for comb in combs:
+                block_num += 1
+                if len(comb) == 3:
+                    mentsu_num += 1
+                elif len(comb) == 2:
+                    if comb[0].num == comb[1].num:
+                        toitsu_num += 1
+    tatsu_num = block_num - mentsu_num - toitsu_num
+    if block_num > 5:
+        if toitsu_num == 0:
+            best_shanten += 1
+        while block_num > 5:
+            if tatsu_num > 0:
+                block_num -= 1
+                tatsu_num -= 1
+                best_shanten += 1
+            else:
+                if toitsu_num > 0:
+                    block_num -= 1
+                    toitsu_num -= 1
+                    best_shanten += 1
+                else:
+                    block_num -= 1
+                    mentsu_num -= 1
+                    best_shanten += 2
+
+    # print(tiles_list)
+    # print('block {} mentsu {} toitsu {}'.format(
+    #     block_num, mentsu_num, toitsu_num))
+    # print('best shanten {}'.format(best_shanten))
+
+    return best_shanten, tiles_list
 
 
 def judge_tehai_shanten(tehai):
@@ -242,7 +310,7 @@ def judge_tehai_shanten(tehai):
         if flg:
             combination_tiles.extend(tiles_)
 
-    shanten = calc_shanten(combination_tiles)
+    shanten, comb_tiles = calc_shanten(combination_tiles)
     return shanten
 
 
@@ -258,4 +326,5 @@ def judge_shanten(tehai, misehai):
         chitoi_shanten = judge_chitoi(tehai)
     shanten = judge_tehai_shanten(tehai)
     shanten = min(kokushi_shanten, chitoi_shanten, shanten)
-    # print(shanten)
+    print(shanten)
+    return shanten
