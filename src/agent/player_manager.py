@@ -9,7 +9,8 @@ class PlayerManager:
     def __init__(self, field):
         self.field = field
         self.players = []
-        for i in range(1, 5):
+        # for i in range(1, 5):
+        for i in range(1, 2):
             self.players.append(Player(i))
         shuffle(self.players)
         for i, player in enumerate(self.players):
@@ -19,7 +20,10 @@ class PlayerManager:
         for player in self.players:
             tile = self.field.tsumo()
             player.tsumo(tile)
-            player.sute()
+            # FOR DEBUG
+            return True
+            tile = player.sute()
+            print(player)
             if self.field.is_finish():
                 return True
         return False
