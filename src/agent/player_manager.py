@@ -20,8 +20,6 @@ class PlayerManager:
         for player in self.players:
             tile = self.field.tsumo()
             player.tsumo(tile)
-            # FOR DEBUG
-            return True
             tile = player.sute()
             print(player)
             if self.field.is_finish():
