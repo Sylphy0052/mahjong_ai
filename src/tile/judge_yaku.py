@@ -326,5 +326,156 @@ def judge_shanten(tehai, misehai):
         chitoi_shanten = judge_chitoi(tehai)
     shanten = judge_tehai_shanten(tehai)
     shanten = min(kokushi_shanten, chitoi_shanten, shanten)
-    print(shanten)
     return shanten
+
+
+def get_comb(tehai):
+    # 理牌する
+    tehai_tmp = sorted(tehai, key=lambda t: t.idx)
+    # 萬子，筒子，索子,字牌で分ける
+    manzu = [t for t in tehai_tmp if t.tile_type is TileType.MANZU]
+    souzu = [t for t in tehai_tmp if t.tile_type is TileType.SOUZU]
+    pinzu = [t for t in tehai_tmp if t.tile_type is TileType.PINZU]
+    jihai = [t for t in tehai_tmp if t.tile_type is TileType.JIHAI]
+    combination_tiles = []
+    iso_tiles = []
+
+    for tiles in([manzu, souzu, pinzu]):
+        # 孤立牌を削除
+        num_tiles = [t.num for t in tiles]
+        remove_idx = []
+        for i, tile in enumerate(tiles):
+            num_tiles = [t.num for t in tiles if tile.idx != t.idx]
+            nums = list(range(tile.num - 2, tile.num + 2 + 1))
+            nums = [n for n in nums if n > 0 and n < 10]
+            tmp = [t for t in num_tiles if t in nums]
+            if len(tmp) == 0:
+                remove_idx.append(i)
+        for idx in reversed(remove_idx):
+            del tiles[idx]
+        # 組み合わせを考える
+        for i, tile in enumerate(tiles):
+            other_tehai = tiles[i + 1:]
+            flg, tiles_ = judge_kotsu(other_tehai, tile)
+            if flg:
+                combination_tiles.extend(tiles_)
+            flg, tiles_ = judge_shuntsu(other_tehai, tile)
+            if flg:
+                combination_tiles.extend(tiles_)
+            flg, tiles_ = judge_tatsu(other_tehai, tile)
+            if flg:
+                combination_tiles.extend(tiles_)
+            flg, tiles_ = judge_toitsu(other_tehai, tile)
+            if flg:
+                combination_tiles.extend(tiles_)
+
+    # 孤立牌を削除
+    tiles = jihai
+    num_tiles = [t.num for t in tiles]
+    remove_idx = []
+    for i, tile in enumerate(tiles):
+        num_tiles = [t.num for t in tiles if tile.idx != t.idx]
+        tmp = [t for t in num_tiles if t == tile.num]
+        if len(tmp) == 0:
+            remove_idx.append(i)
+    for idx in reversed(remove_idx):
+        del tiles[idx]
+    # 組み合わせを考える
+    for i, tile in enumerate(tiles):
+        other_tehai = tiles[i + 1:]
+        flg, tiles_ = judge_kotsu(other_tehai, tile)
+        if flg:
+            combination_tiles.extend(tiles_)
+        flg, tiles_ = judge_toitsu(other_tehai, tile)
+        if flg:
+            combination_tiles.extend(tiles_)
+
+    shanten, comb_tiles = calc_shanten(combination_tiles)
+    delete_idx = []
+    for combs in comb_tiles:
+        for comb in combs:
+            for t in comb:
+                delete_idx.append(t.idx)
+    iso_list = [t for t in tehai if t.idx not in delete_idx]
+
+    return comb_tiles, iso_list
+
+
+def get_primary(comb_list):
+    print(comb_list)
+    shuntsu = []
+    kotsu = []
+    toitsu = []
+    tatsu = []
+    for combs in comb_list:
+        for comb in combs:
+            if len(comb) == 3:
+                if comb[0].num == comb[1].num:
+                    kotsu.append(comb)
+                else:
+                    shuntsu.append(comb)
+            elif len(comb) == 2:
+                if comb[0].num == comb[1].num:
+                    toitsu.append(comb)
+                else:
+                    tatsu.append(comb)
+    if len(tatsu) > 0:
+        kanchan = []
+        penchan = []
+        ryanmen = []
+        for comb in tatsu:
+            if comb[1].num - comb[0].num == 2:
+                kanchan.append(comb)
+            else:
+                if comb[0].num == 1 or comb[1].num == 9:
+                    penchan.append(comb)
+                else:
+                    ryanmen.append(comb)
+        if len(penchan) > 0:
+            return penchan[0]
+        elif len(kanchan) > 0:
+            return kanchan[0]
+        else:
+            if len(toitsu) > 1:
+                return toitsu[0]
+            else:
+                return ryanmen[0]
+    elif len(toitsu) > 2:
+        return toitsu[0]
+    return None
+
+
+def get_iso(tehai):
+    # 理牌する
+    tehai_tmp = sorted(tehai, key=lambda t: t.idx)
+    # 萬子，筒子，索子,字牌で分ける
+    manzu = [t for t in tehai_tmp if t.tile_type is TileType.MANZU]
+    souzu = [t for t in tehai_tmp if t.tile_type is TileType.SOUZU]
+    pinzu = [t for t in tehai_tmp if t.tile_type is TileType.PINZU]
+    jihai = [t for t in tehai_tmp if t.tile_type is TileType.JIHAI]
+    combination_tiles = []
+    iso_tiles = []
+
+    for tiles in([manzu, souzu, pinzu]):
+        # 孤立牌を削除
+        num_tiles = [t.num for t in tiles]
+        remove_idx = []
+        for i, tile in enumerate(tiles):
+            num_tiles = [t.num for t in tiles if tile.idx != t.idx]
+            nums = list(range(tile.num - 2, tile.num + 2 + 1))
+            nums = [n for n in nums if n > 0 and n < 10]
+            tmp = [t for t in num_tiles if t in nums]
+            if len(tmp) == 0:
+                iso_tiles.append(tile)
+
+    # 孤立牌を削除
+    tiles = jihai
+    num_tiles = [t.num for t in tiles]
+    remove_idx = []
+    for i, tile in enumerate(tiles):
+        num_tiles = [t.num for t in tiles if tile.idx != t.idx]
+        tmp = [t for t in num_tiles if t == tile.num]
+        if len(tmp) == 0:
+            iso_tiles.append(tile)
+
+    return iso_tiles

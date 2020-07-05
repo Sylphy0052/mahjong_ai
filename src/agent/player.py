@@ -1,5 +1,6 @@
-from tile.judge_yaku import judge_shanten
+from tile.judge_yaku import judge_shanten, get_comb, get_primary, get_iso
 from status.yaku_type import YakuType
+# from time import time
 
 
 class Player:
@@ -23,13 +24,37 @@ class Player:
 
     def tsumo(self, tile):
         self.tehai.append(tile)
-        # FOR DEBUG
-        judge_shanten(self.tehai, self.misehai)
+        print('自摸: {}'.format(tile))
 
     def sute(self):
-        tile = self.tehai[-1]
+        # start_time = time()
+        # ここに孤立牌を捨てるプログラムを入れる
+        iso_tiles = get_iso(self.tehai)
+        print('孤立牌 {}'.format(iso_tiles))
+        if len(iso_tiles) > 0:
+            tile = iso_tiles[-1]
+            tile_idx = tile.idx
+        else:
+            comb_tiles, iso_tiles = get_comb(self.tehai)
+            if len(iso_tiles) == 0:
+                comb = get_primary(comb_tiles)
+                if comb is None:
+                    shanten = judge_shanten(self.tehai, self.misehai)
+                    print(shanten)
+                    raise Exception
+                tile = comb[-1]
+                tile_idx = tile.idx
+            else:
+                tile = iso_tiles[-1]
+                tile_idx = tile.idx
+        print('捨て {}'.format(tile))
         self.sutehai.append(tile)
-        self.tehai.remove(tile)
+        for i, t in enumerate(self.tehai):
+            if t.idx == tile_idx:
+                del self.tehai[i]
+        # self.tehai.remove(tile)
+        self.tehai = sorted(self.tehai, key=lambda t: t.idx)
+        # print('Time: {:.1f}'.format(time() - start_time))
         return tile
 
     def chi(self, tile):
